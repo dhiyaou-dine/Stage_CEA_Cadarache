@@ -1,0 +1,589 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% En-tête classique
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\documentclass[10pt,a4paper]{article}%           autres choix : report, book
+\documentclass[11pt,a4paper]{scrartcl}%           autres choix : report, book
+
+\usepackage[utf8]{inputenc}%       encodage du fichier source
+\usepackage[T1]{fontenc}%          gestion des accents (pour les pdf)\usepackage[frenchb]{babel}%        rajouter éventuellement english, greek, etc.
+\usepackage[english]{babel}%        rajouter éventuellement english, greek, etc.
+\usepackage{textcomp}%             caractères additionnels
+%\usepackage{mathtools,mathtext}
+\usepackage{amsmath,amssymb,amsopn,amsthm}%      pour les maths
+\usepackage{lmodern}%              remplacer éventuellement par txfonts, fourier, etc.
+\usepackage[a4paper]{geometry}%    taille correcte du papier
+\usepackage{graphicx}%             pour inclure des images
+\usepackage{xcolor}%               pour gérer les couleurs
+\usepackage{microtype}%            améliorations typographiques
+
+\usepackage{hyperref}%             gestion des hyperliens
+\hypersetup{pdfstartview=XYZ}%     zoom par défaut
+\usepackage{hyperref}%             gestion des hyperliens
+\hypersetup{pdfstartview=XYZ}%     zoom par défaut
+%\theoremstyle{plain}
+\newtheorem{theoreme}{Thèoréme}[section]
+\newtheorem{corollaire}[theoreme]{Corollaire}
+\newtheorem{proposition}[theoreme]{Proposition}
+\newtheorem{lemme}[theoreme]{Lemme}
+\newtheorem{exple}{Exemple}
+\newtheorem{exo}{Exercice}
+%\theoremstyle{definition}
+\newtheorem{definition}[theoreme]{Définition}
+%\theoremstyle{remark}
+%\newtheorem*{remark}{Remarque}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\K}{\mathcal{C}}
+\newcommand{\norme}[1]{\left\lVert#1\right\rVert}% Pour la norme
+\newcommand{\va}[1]{\left\lvert#1\right\rvert}%pour la valeur absolue
+\newcommand{\mtext}[1]{\quad\text{#1}\quad}% pour écrire du texte séparé par deux grands espaces en mode mathématique.
+\newcommand{\abs}[1]{\lvert#1\rvert_{\mathcal{A}}}% pour les v.a
+
+\title{}
+\author{}
+\date{}
+
+\begin{document}
+	 \begin{titlepage}
+		\begin{center}
+			\textbf{\LARGE Stage de fin d'étude\\ Université de Nantes\\ M2 MACS promotion 2019-2020}\\ [2cm]
+			%titre
+			%\HRule \\ [0.5cm]
+			{\huge \bfseries  Étude de schémas de couplage en temps de modèles de types boites noires et implémentation dans la plateforme logicielle \text{PROCOR} pour les accidents graves dans les réacteurs nucléaires\\ [0.4cm] }
+			%	\HRule \\ [2cm]
+			\vspace*{+40mm}
+			\begin{minipage}{0.4\textwidth}
+				\begin{flushleft} \large
+					\emph{Effectué par:}\\ \textsc{\text{Dhiyaou-dine} \text{AHMED KASSIM}}
+				\end{flushleft}
+			\end{minipage}
+			\hspace*{+26mm} \vspace*{+40mm}
+			\begin{minipage}{0.4\textwidth}
+				\begin{flushleft} \large
+					\emph{Tuteur:}\\ \textsc{Louis \text{VIOT}}
+				\end{flushleft}
+			\end{minipage}
+			\vfill
+			{\large   Septembre 2020}
+		\end{center}
+	\end{titlepage}
+% \maketitle
+\newpage
+	\begin{center}
+		\textbf{ Remerciements}
+	\end{center}
+	Dans un premier temps, je tiens à remercier vivement le chef du laboratoire \textbf{LMAG} M. \text{Laurant SAAS} et mon tuteur de stage M. \text{Louis VIOT} de m’avoir permis de réaliser ce stage au sein du laboratoire \textbf{LMAG} pour une durée de quatre mois, ce qui était un grand honneur pour moi de travailler avec cette belle équipe, enthousiaste et accueillante. Je le remercie pour la qualité de ses recommandations, sa disponibilité, sa patience et sa gentillesse. Mes remerciements pour tout le personnel du laboratoire \textbf{LMAG} de m'accueillir dans leur famille pour une si agréable aventure et de me faire profiter  de leur expertise et valeur. Je tiens aussi à remercier, les enseignants de ce Master, qui nous ont inculqué des outils fondamentales,sans quoi il serait difficile de faire face à mes recherches. En fin, un grand merci pour les responsables de ce Master, de nous avoir permit de poursuivre cette formation, une chose qui me tenait beaucoup à cœur.
+	\newpage
+	\tableofcontents
+	\listoffigures 
+	\newpage
+	\section{Introduction}
+	La résolution mathématique et numérique des problèmes multi-échelle et multi-physiques couplés est un défit technique majeur dans le domaine de l'ingénierie. Dans le domaine des accident grave dans les réacteurs nucléaires, des différents phénomènes sont couplés avec un temps caractéristique, longueur et masse, qui varient de micro-secondes à jours, millimètres à mètres, kilogrammes à des centaines de tonnes. Cela exige une simulation de l'intégralité d'un scénario d'accident grave ou  une partie de ce dernier, ce qui conduit à un problème couplé de différentes grandeurs physiques. Pour cela il faut utiliser des simulations pour avoir une bonne compréhension de certains phénomènes intervenants le long de ces accidents. A cause d'un manque de connaissances physiques et phénoménologiques de ce type de problème, un large spectre de modèles, modélisant les phénomènes physiques sous-jacents est utilisé(par exemple, modèles stationnaire, modèles réduits ...). Les modèles appelés "$0D$ modèles", ou aussi appelés "\text{Lumped parametr models}"(\text{LP models}), se basent sur l'intégration des \text{EDP} sur tout le volume considéré du domaine. Cela permet de gagner en temps de calcul et en coup de calcul. Toute fois, la simplification implique un prix à payer
+	\begin{itemize}
+		\item [$\bullet$] les modèles LP utilisent des lois de fermetures souvent décrites par des fonctions non linéaires, donc pas très simple à évaluer.
+		\item [$\bullet$] Les modèles LP ignorent le temps final de propagation des informations de l'équation continue, le temps de discrétisation ...
+	\end{itemize}     
+	et encore d'autres difficultés à gérer.\\
+	Pour le couplage de ces phénomènes, nous disposons de deux types de schémas : 
+	\begin{itemize}
+		\item [$\bullet$] les schémas de couplage explicites
+		\item[$\bullet$] les schémas de couplage implicites
+	\end{itemize}
+	Dans les codes accidents graves, le schéma explicite est généralement utilisé. Malheureusement, les modèles utilisés dans les AG sont souvent raides et non adaptés au schéma
+	explicite. Le but du stage es d’étudier l’utilisabilité des schémas explicites et implicites sur un exemple de couplage important pour les AG.\\
+	Ici nous nous concentrons sur les solutions numériques du couplage de modèles $OD$ hétérogènes par une approche partitionnée.  Nous considérons par conséquent un couplage simple de deux domaines liquide et solide, mais ce couplage est très important pour les accidents graves dans les réacteurs nucléaires. En général, dans les accidents graves, les problèmes couplés font intervenir de nombreux modèles ($\geq 10$) couplés.\\
+	Notre travail consiste à :
+	\begin{enumerate}
+		\item étudié la stabilité théorique d'un problème couplé par un schéma explicite
+		\item étudié la stabilité théorique d'un problème couplé par un schéma implicite
+		\item validé notre étude théorique par des simulations numériques
+	\end{enumerate}
+	Pour cela, notre travail est composé comme suit :\\
+	Dans la section (\ref{sec1}) on présente le concept d'accident grave dans les réacteurs nucléaires à eau pressurisée(ce qui est le domaine de notre travail). \\
+	Dans la section (\ref{sec2}) nous définissons les équations modélisant notre problème et définissons les conditions aux bords suivant le type de contact entre entre deux domaines et enfin, nous définissons les lois de fermetures de nos systèmes.\\
+	Dans la section (\ref{sec3}) nous présentons le concept de couplage entre domaines ainsi que les couplages explicites et implicites que nous allons appliquer à nos systèmes.\\
+	Enfin, dans la section (\ref{sec4}) nous étudions la stabilité de nos systèmes avec un schéma explicite et un schéma implicite et nous interprétons numériquement les résultats obtenus.
+	\newpage
+	\section{Accidents graves dans les réacteurs à eau pressurisée}\label{sec1}
+	Suite à un accident au sein d'un réacteur nucléaire, des produits radioactifs se dispersent dans la nature, présentant beaucoup de risques en premier lieu envers les gérants des installations nucléaires, puis l'environnement et la population, proche ou distante de ces installations.
+	Dans la sûreté nucléaire, le principal travail consiste à réduire ces risques, afin d'assurer la sécurités de tous. Dans cette étude, nous ne parlerons que des réacteur à eau pressurisée (\textbf{REP}). L'extension de cette étude à d'autres types de réacteurs tels que, les réacteur bouillants de \text{Fukushima Daiichi} ou réacteurs à neutrons rapides reste possible, en prenant en compte la géométrie et les phénomène physique propres de ces réacteurs. 
+	\subsection{Fonctionnement et sûreté dans les \textbf{REP}}
+	\includegraphics[width = 1\textwidth]{./schemas/REP}\\
+	\captionof{figure}{Principe de fonctionnement d'un réacteur à eau pressurisée}
+	\label{Fig.1}
+	
+	
+	Dans un réacteur de puissance type \text{REP} (Figure \ref{Fig.1}), les réactions neutroniques du cœur du réacteur génèrent de l'énergie. Celle-ci est extraite à l'aide d'un fluide calo-porteur : l'eau, sous forme de chaleur. La transformation de l'énergie thermique en énergie électrique se fait en plusieurs étapes au sein du réacteur :
+	\begin{enumerate}
+		\item Extraction par refroidissement de la chaleur du cœur du réacteur contenant le combustible. Cette extraction est assurée par l'eau circulant en circuit fermé dans le circuit primaire du réacteur à une pression de 155 bars et à une température pouvant atteindre 320° C. 
+		\item Transmission de la chaleur récupérée par l'eau dans la circuit primaire à l'eau circulant dans la circuit secondaire au niveau du générateur de vapeur. Étant à une pression inférieure, elle s'évapore et alimente le groupe turbo-alternateur produisant l'électricité.
+		\item Le reste de l'énergie contenue dans l'eau est enfin transmise à l'extérieure.
+	\end{enumerate}
+	La chaleur extraite du cœur, moteur du réacteur nucléaire provient :
+	\begin{itemize}
+		\item [$\bullet$] principalement des réactions de fission de certains isotope de l'$^{235}U$ contenus dans le combustible nucléaire disposé dans le cœur du réacteur nucléaire dans des assemblages de crayons de combustibles.\\
+		\includegraphics[width = 0.8\textwidth]{./schemas/crayon}\\
+		\captionof{figure}{ De la gauche vers la droite : Assemblage combustible et crayon combustible}
+		\label{Fig.2}
+		\item [$\bullet$] d'une puissance résiduelle due à la désintégration radioactive des produits de fission. 
+	\end{itemize}
+	Ainsi, pour assurer la sûreté d'un \textbf{REP} à tout moment de son fonctionnement, une maîtrise de la réactivité du cœur est nécessaire pour assurer l'extraction de l'énergie émise sous forme de chaleur tout en assurant le confinement des matières radioactives. Trois barrières physiques successives présentes dans le réacteur assurent ce confinement : la gaine des crayons combustibles, le circuit primaire fermé(la cuve du réacteur) et l'enceinte de confinement en béton du réacteur. Toutefois, des défaillances humaines ou physiques peuvent parvenir, comme la rupture de gaines, fuite dans le circuit primaire, ablation de l'enceinte de confinement du réacteur. Pour pallier ces défaillances, des stratégies de défense en profondeur, divisée en plusieurs niveaux ont été introduite.  \\
+	A ce concept de défense en profondeur déterministe, issu du retour d'expérience et de recherche, on associe une approche de sûreté probabiliste. Elle trouve son intérêt dans les réacteurs nucléaires du fait du grand nombre de défaillances humaines possibles et du manque de connaissance globale sur la physique mise en jeu.\\
+	Ces deux approches combinées, permettent la mis en place de mesure prévenant tout incident pouvant survenir dans un réacteur et apporter des corrections éventuellement. Ainsi, l'extraction de l'énergie émise par le cœur, la maîtrise de la réactivité du cœur et l'ensemble des barrières physique sont assurés, tout en prévenant le rejet de déchets radioactifs dans l'environnement.\\
+	Malgré toutes ces mesures, une accumulation d'incident, provenant d'erreurs matérielles ou humaines, peut conduire à une situation de fusion partielle ou complète du cœur : on parle alors d'accidents graves(\textbf{AG}) 
+	\subsection{Phénomène d'accident grave dans un \textbf{REP}}
+	Un accident dans un réacteur nucléaire peut être causé par plusieurs facteurs, tels que : l'insertion d'une quantité importante de réactivité dans le cœur par retrait des barres de commandes permettant de réguler sa neutronique. Ce sont des accidents de réactivité. Il ne sont pas traité dans cette étude. \\
+	Ici nous ne présentons les accidents graves initiés pas la perte de l'eau, constituant le réfrigérant primaire. On parle alors d'accidents de perte du réfrigérant primaire(\textbf{APRP}). Cette perte peut avoir différentes causes, comme l'ouverture d'une brèche de plus ou moins grande taille dans le circuit primaire du réacteur ou une perte d'électricité permettant, entres autres, aux pompes injectant l'eau de fonctionner.\\
+	Lors d'un \textbf{AG} dans un \textbf{REP} le manque de liquide de refroidissement(due à une cause cité ci-dessus par exemple) dans la cuve du réacteur conduit à l'échauffement et à la fusion du cœur du réacteur : la matière ainsi obtenu est le bain de corium(matériaux liquides oxydés et métalliques). Le corium a une température avoisinant les 2850 K. Au cours de sa progression, il interagit avec les structures métalliques environnantes pour se re-localiser au fond de la cuve. Au contact avec l'eau présent au fond de la cuve, le corium peut se refroidir et former un lit de débris. Ce lit de débris n'étant plus refroidi, va alors fusionner a son tour pour former un bain de corium. Des flux de chaleur important provenant du corium vont être imposés sur la cuve pouvant mener à sa rupture et à la propagation du corium dans le puits de cuve. Le corium va donc interagir avec le radier en béton du réacteur, l'ablater et potentiellement s'échapper vers l'extérieur.\\
+	\includegraphics[width = 1\textwidth]{./schemas/propagation}\\
+	\captionof{figure}{Représentation schématique de la propagation du corium du cœur du réacteur jusqu'au radier en béton du puits du réacteur.}
+	\label{Fig.3}
+	Lors de la propagation du corium, on a trois risques majeurs :
+	\begin{itemize}
+		\item [$\bullet$] Interaction corium/eau (Figure \ref{Fig.3}). Aussi appelé explosion de vapeur. Elle se produit en cas de contact entre le corium et l'eau dans la cuve ou dans le fond de cuve. Une explosion due à la vaporisation instantanée de l'eau causée par le fort écart de température entre les deux matériaux est possible et peux fortement endommager les structures environnantes.
+		\item [$\bullet$] Le risque hydrogène. Lors de l'oxydation des gaines des crayons combustibles, des structures métalliques contenues dans la cuve, de la structure de la cuve ou du béton de la cuve, un fort dégagement d'hydrogène est possible. A une concentration trop importante, l'hydrogène peut s'enflammer et une explosion peut endommager l'enceinte du réacteur.
+		\item[$\bullet$] Interaction corium/béton (Figure \ref{Fig.3}). Lorsque le corium atteint le puits de cuve lors de sa propagation, il entre en contact avec le béton composant ce dernier. Cette interaction est à l'origine de l'ablation du béton et pourrait conduire au percement du radier dans certain cas et à la libération de produits radioactifs dans l'environnement. 
+	\end{itemize} 
+	Ces trois risques mettent en péril la troisième barrière avant l'environnement extérieur au réacteur.\\
+	
+	Par conséquent, une modélisation précise de la propagation du corium depuis la fonte du cœur jusqu'à son interaction avec le radier en béton du réacteur est essentielle pour prévenir l'apparition de ces phénomènes.\\
+	\newpage
+	\section{Équations gouvernant le système}\label{sec2}
+	On suppose que le problème couplé se base sur différentes caractéristiques des différents domaines. La figure (Figure \ref{Fig.4}) décrit une décomposition du domaine $\Omega$ tel que $\Omega = \bigcup_{i \in [[1,m]]}\Omega_i$ sans chevauchement. Les domaines voisins de $\Omega_j$ sont couplé avec $\Omega_i$ par l'interface $\Gamma_{ij}$. $\Omega_j$ peut être le voisin actuel de $\Omega_i$ (i.e $\Gamma_{ij} \neq \partial\Omega_i\cap\partial\Omega_j$) ou peut être distant du domaine $\Omega_i$ auquel cas il est lié par des phénomènes lointains (i.e $\partial\Omega_i\cap\partial\Omega_j = 0$). Les voisins du domaine $\Omega_i$ sont représentés par l'ensemble $N_i = \{j/\exists \Gamma_{ij}\}$, avec un cardinal qu'on note $n_i = card(N_i)$. En fin, le frontière de $\Omega_i$ peut être calculé par $\partial = \Gamma_i\cup(_{j\in N_i}\Gamma_{ij})$. Le domaine $\Omega_i$ est défini en terme de masse par $m_i[kg]$ et température moyenne notée $T_i[K]$:
+	\begin{equation}
+	m_i = \int_{\Omega_i}\rho dV, \quad T_i = \frac{1}{V_{\Omega_i}}\int_{\Omega_i}T dV.\notag
+	\end{equation} 
+	
+	
+	
+	Le vecteur des variables d'état du sous-domaine
+	$\Omega_i$ est noté $\textbf{u}_i = (m_i,T_i)^t$. Notez que dans cet article, nous représentons
+	chaque sous-domaine en termes de températures moyennes même si il pourrait être représenté en terme d'enthalpie moyenne.
+	Les variables d’interface sont les flux thermiques $\phi_{ij}[W.m^{-2}]$, la température $T_{ij}[K]$, le débit massique $\dot{m}_{ij}[kg.s^{-1}]$ ou la surface
+	$S_{ij}[m^2]$. Ces variables sont regroupées dans le vecteur $\textbf{b} = \{(\phi_{ij},T_{ij}, \dot{m}_{ij}, S_{ij})^t \}$ pour $i \in [1,m] \mtext{et} j\in N_i$.  
+	
+	
+	\subsection{Équations paramétrées de sous-domaine regroupés}
+	Les équations sont exprimées en termes d'équations macroscopiques de conservations de masse et d'énergie . Elles sont obtenues à partir des équations de conservation locales, ici les équations de Navier-Stokes sous l'approximation de \text{Boussinesq} pour les domaines liquide et équations de chaleur pour les domaines solides, intégrées sur le sous-domaine correspondant (Le \text{Tellier} et al., 2017).
+	Étroitement liée au modèle physique local, cette approche conduit au modèle dit LP ou modèle «0D» du
+	sous-domaine décrit par les deux équations différentielles ordinaires (ODE)
+	\begin{equation}\label{eq1}
+	\frac{dm_i}{dt} = \sum_{j\in N_i}\dot{m}_{ij} \mtext{dans} \Omega_i,	
+	\end{equation}
+	
+	\includegraphics[width = 14cm]{./schemas/subDomaine}\\
+	\captionof{figure}{Représentation d'une décomposition d'un domaine $\Omega$ centrée sur $\Omega_i$ et ses voisins $\Omega_{j\in N_i}$}
+	\label{Fig.4}	
+	\begin{equation}\label{eq2}
+	m_iC_{p_i}\frac{dT_i}{dt} + \sum_{j\in N_i}\dot{m}_{ij}C_{p_i}(T_i-T_{ij}) = \sigma_i\phi_iS_i + \sum_{j\in N_i}\sigma_{ij}\phi_{ij}S_{ij} + m_i\dot{q}_i \mtext{dans} \Omega_i 
+	\end{equation}
+	avec $m_i [kg]$ la masse et $T_i[K]$ la température moyenne du domaine $\Omega_i$, $\phi_i[W.m^{-2}]$le flux de chaleur sur le bord $\Gamma_i = \partial\Omega\cap\partial\Omega_i$ avec comme température $T_{b_i}$ et comme surface $S_i[m^2]$ ($\sigma_i = -1$ pour un refroidissement et $\sigma_i = 1$ sinon), $\phi_{ij}$ le flux de chaleur de refroidissement ou de chauffage et $\dot{m}_{ij}[kg.s^{-1}]$ le débit de la masse algébrique sur $\Gamma_{ij}$ avec comme température $T_{ij}$ et la surface $S_{ij}$. Enfin, $C_{p_i}[J.kg^{-1}.K^{-1}]$ la capacité de chaleur et $\dot{q}_i[W.kg^{-1}]$ la puissance résiduelle par unité de masse provenant de la fission des éléments radioactifs du sous-domaine $\Omega_i$. 
+	\subsection{Équation sur l'interface}
+	Les interface entre deux sous-domaines $\Omega_i$ et $\Omega_j$ dans notre étude, peuvent être soit fixe, soit mobile. Dans le cas d'un échange de produit fondu ou matière solide entre un sous domaine solide et un sous domaine liquide, l'interface est mobile.Elle est associée à un front de solidification/fusion plan correspondant à la condition de \text{Stefan} à l'interface (Le \text{Tellier et al.}, 2017). Les interfaces fixes correspondent à l'équilibre thermique, en supposant aucun échange de masse à travers l'interface et une conduction thermique.\\
+	Pour une interface mobile, les conditions d'équilibre à l'interface $\Gamma_{ij}$ sont données par :
+	\begin{equation}\label{eq3}
+	\dot{m}_{ij} = -\dot{m}_{ji} \mtext{sur} \Gamma_{ij}
+	\end{equation}
+	\begin{equation}\label{eq4}
+	\phi_{ij}S_{ij} = \phi_{ji}S_{ji} + \Delta\mathcal{H}^{fus}\dot{m}_{ij} \mtext{sur} \Gamma_{ij}
+	\end{equation}
+	\begin{equation}\label{eq5}
+	T_{ij} = T_{ji} = T^{fus} \mtext{sur} \Gamma_{ij}
+	\end{equation}
+	avec $\Delta\mathcal{H}^{fus}$ l'enthalpie de fusion et $T^{fus}$ la température de fusion du domaine $\Omega_i$, les deux supposées fixes. En particulier, ces conditions stipulent que le taux de masse sur les deux cotés de l'interface pour la conservation de la masse et que les flux de chaleurs doivent respecter la condition de \text{Stefan}. Pour simplifier, les matériaux des sous-domaines sont traités comme corps purs et aucune thermochimie n'est considérée. \\
+	Pour une interface fixe, les conditions d'équilibre sur l'interface $\Gamma_{ij}$ sont données par :
+	\begin{equation}\label{eq6}
+	\dot{m}_{ij} = -\dot{m}_{ji} = 0 \mtext{sur} \Gamma_{ij},\\
+	\end{equation}
+	\begin{equation}\label{eq7}
+	T_{ij} = T_{ji}  \mtext{sur} \Gamma_{ij},\\
+	\end{equation}
+	\begin{equation}\label{eq8}
+	\phi_{ij}S_{ij} = \phi_{ji}S_{ji} \mtext{sur} \Gamma_{ij}
+	\end{equation} 
+	Des lois de fermetures appropriées sont requises pour les flux et les températures sur l'interface pour les équations ci-dessus.\\
+	Si le domaine $\Omega_i$ est solide, les loi de fermeture pour les flux thermiques $\phi_{ij}$ peuvent être calculées à partir de l'équation de conduction de la diffusion thermique sous certaines hypothèses et approximations. Une comparaison de ces différents modèles d'approximations avec une solution de référence est donnée par une discrétisation par éléments finis de l'équation de conduction thermique dans \text{Le Tellier et al. (2017)}. Par exemple, le modèle quadratique     suppose un profil de température quadratique dans le domaine solide. Les flux de chaleur de conduction aux interfaces $\Gamma_{ij}$ et $\Gamma_{ik}$ associés aux surfaces supérieure et inférieure du cylindre sont alors données par :(\text{Le Tellier et al., 2017}):
+	\begin{gather}
+		\phi_{ij} = \lambda_i\frac{6T_i - 4T_{ij} - 2T_{ik}}{ e_i}\\
+		\phi_{ik} = \lambda_i\frac{6T_i - 4T_{ik} - 2T_{ij}}{ e_i}
+	\end{gather}
+	Avec $e_i$ la longueur caractéristique et $\lambda_i$ la conductivité thermique.\\
+	Notez, par exemple, la propagation instantanée de la température $T_{ik}$ à l'interface $\Gamma_{ik}$ vers l'interface $\Gamma_{ij}$ dans l'Eq. (10), indique que le modèle stationnaire donne des lois de fermeture qui propagent instantanément les données liées aux limites entre
+	les interfaces du domaine.\\
+	On peut aussi trouver d'autres lois de fermeture non linéaire pour $\phi_{ij}$. Par exemple une loi de transfert de chaleur de convection : 
+	\begin{equation}\label{equa11}
+	\phi_{ij} =\frac{\lambda_iN_u}{e_i}(T_i - T_{ij})^{\beta}
+	\end{equation}
+	
+	Elle est par exemple utilisée pour calculer le flux de chaleur  du bain de corium dans la partie inférieure vers la cuve. Pour les calculs avec ce flux, deux cas sont possible :
+	\begin{itemize}
+		\item le cas où l'on utilise un \text{Rayleigh} interne. Dans ce cas le $\beta = 1$, ce qui rend le système bien exploitable au calcul et des résultat conforme à l'analyse numérique. Dans ce cas, nous validerons notre analyse par la simulation numérique. 
+		\item le cas où l'on utilise un \text{Rayleigh} externe. Dans ce cas, les calculs sont très compliqués pour l'analyse numérique. Dans ce cas, nous aurons recours aux simulations pour analyser le comportement du système.
+	\end{itemize}
+	Dans la suite de notre analyse nous considérerons le cas ou $\beta = 1$. L'égalité (\ref{equa11}) s'écrit :
+	\[
+	\phi_{ij} = C^{te}{e_i}^{\alpha}(T_i - T_{ij})
+	\]
+	En effet :
+	\begin{equation*}
+		\phi_{ij} = \frac{\lambda_iN_u}{e_i}(T_i-T_{ij}) 
+	\end{equation*}
+	Avec \text{Nu} est le nombre de \text{Nusselt}, donné par une corrélation expérimentale à partir du \text{Rayleigh}.
+	\begin{gather*}
+		\mtext{avec} N_u = aR_{ai}^b \mtext{et} R_{ai}= C^{te} e^c_i \mtext{et} a,b, c \in \R \\
+		\mtext{Donc} N_u = a\cdot {C^{t}}'\cdot e^{c\cdot b}_i  \\
+		\mtext{on obtient} \phi_{ij} = {C^{te}}''e^{c\cdot b-1}_i(T_i - T_{ij})\\
+		\mtext{D'où} \phi_{ij} = C^{te}{e_i}^{\alpha}(T_i - T_{ij})
+	\end{gather*}
+	Avec $R_{ai}$ le \text{Rayleigh} interne.
+	\subsection{Système couplés}
+	On considère un système couplé composé d'un domaine liquide et d'un domaine solide couplé sans échange de masse. Dans ce cas, les deux domaines sont couplés par les équations (\ref{eq3}), (\ref{eq4}) et (\ref{eq5}). Les flux à l'interface sont donnés par :
+	\begin{equation}\label{eq11}
+	\phi_{ij} = C^{te}{e_i}^{\alpha}(T_i - T_{ij})
+	\end{equation}
+	\begin{equation}\label{eq12}
+	\phi_{ik} = \lambda_i\frac{6T_i - 4T_{ij} - 2T_{ik}}{ e_i}
+	\end{equation}
+	Dans notre étude nous considérons un interface fixe (interaction entre domaine solide et domaine liquide). Donc, on considère un flux de convection et un flux de conduction. Par conséquent, les lois de fermeture pour les flux à l'échelle macroscopique de l'équation de la conservation de l'énergie (\ref{eq2})  seront donné par les équation $LP$ (\ref{eq11}) et (\ref{eq12}).\\
+	Notez qu'à titre de comparaison, ces flux thermiques seront également calculés par des modèles de conduction thermique 1D lors de l'analyse numérique de notre problème.
+	\newpage
+	\section{Schémas de résolution du couplage et de synchronisation des modèles}\label{sec3}
+	Dans cette partie, pour définir la notion de couplage et synchronisation, nous revenons dans le concept général d'accident grave où les modèles peuvent prendre n'importe quel forme, pas seulement des modèles $OD$. Nous allons aussi définir les schémas explicites et implicites de réduction du couplage.\\
+	Chaque phénomène physique intervenant lors de la propagation du coirum dans un réacteur nucléaire lors d'un \text{AG} est modélisé par un modèle $\mathcal{M}_i$.\\
+	On associe un solveur numérique à chaque modèle. On notera $\mathcal{M}_i$ le modèle ou son solveur associé. Dans notre contexte des \text{AG}, on utilise une modélisation par blocs couplés des phénomènes physiques. L'ensemble des modèles modélisant la propagation prend la forme d'un système complexe qu'on représente par le schéma ci-dessous\\
+	\includegraphics[width = 1\textwidth]{./schemas/couplage}\\
+	\captionof{figure}{Graphe de couplage partiel d'un système complexe associé à un problème de couplage. Le système est composé de $k$ modèle. Le graphe est centré sur le modèle $\mathcal{M}_i$ et seuls ses couplages sont présentés.}
+	\label{Fig.5}
+	\subsection{ Les équations discrètes couplées}\label{sec6}
+	Le solveur $\mathcal{M}_i$ de la figure \ref{Fig.5} est le modèle constitué des équations (\ref{eq1}) et (\ref{eq2}). Les modèles $\mathcal{M}_i$ sont discrétisés en espace et en temps en interne et couplés en temps à un niveau supérieur externe aux modèles. On a ainsi deux niveau de boucle en temps. D'une part, avec des schémas implicites ou explicites de type \text{Euler}, \text{Runge-Kutta d'ordre élevé} par exemple, les modèles gèrent eux même leur schéma interne de discrétisation. Le modèle a son propre schéma d'intégration et son propre temps d'intégration. Le schéma d'intégration est supposé adapté à la physique du problème locale considéré. D'autre part, les modèles sont résolus et communiquent entre les temps $t^0, t^1,\cdots, t^n,, \cdots$. Une synchronisation est effectuée à chaque pas de temps. On note $\Delta t$ le pas de temps. Il peut varié au cours de la simulation. \\
+	Pour tout solveur $\mathcal{M}_i$ représentant le sous-domaine $\{\Omega_i\}_{i\in[1,m]}$, les équations discrétisées sont représentées par une fonction $\mathcal{F}^{\Delta t}_i$. Elle prend en paramètre, le vecteur d'état $u_i$  du modèle $\mathcal{M}_i$, les variables de couplage reçues $\{b_{ij}\}_{j\in N_i} \overset{\text{déf}}{=} b_{*i}$ par ce solveur ainsi que les conditions limites $b_i$. En utilisant ces notations, la résolution du problème de couplage revient à résoudre le système non-linéaire suivant :
+	\begin{equation}\label{eq13}
+	\begin{cases}
+	\mathcal{F}^{\Delta t}_1(u_1, \{b_{j1}(u_j,b_{*j})\}_{j\in N_1}) = 0\\
+	\mathcal{F}^{\Delta t}_2(u_2, \{b_{j2}(u_j,b_{*j})\}_{j\in N_2}) = 0\\
+	\vdots\\
+	\mathcal{F}^{\Delta t}_m(u_m, \{b_{jm}(u_j,b_{*j})\}_{j\in N_m}) = 0
+	\end	{cases}
+	\end{equation}
+	Les interactions entre les modèles apparaissant dans (\ref{eq13}) par le biais des variables d'entrées $b_{ij}(u_j,b_{*j})$ à l'interface $\Gamma_{ij}$ entre les modèles $\mathcal{M}_i$ et $\mathcal{M}_j$ pour $j\in N_{*i}$. Lors de la résolution du modèle $\mathcal{M}_j$, on calcul les variables d'interface à partir de $u_j$ et $b_{*j}$. Ces dernières sont calculées par d'autres modèles nécessitant des données du modèle $\mathcal{M}_i$. Pour ce qui concerne le pas de temps de couplage $\Delta t$, il peut être calculé par une fonctionnelle $\mathcal{F}_i$ si un événement lors de la résolution forçant le solveur $\mathcal{M}_i$ à stopper sa résolution avant la fin complète du pas de temps. Ce pas de temps permet la synchronisation des modèles qu'on présente ci-après.\\
+	Mathématiquement, le solveur $\mathcal{M}_i$ peut être vu comme une fonction calculant les variables de sorties $b_{i*}$ à partir des variables d'entrées $b_{*i}$ Pour des raisons de simplicité, seules les variables d'interfaces apparaissent. On définit donc $\mathcal{M}_i$ par :
+	\begin{equation}\label{eq14}
+	b_{i*} = \mathcal{M}_i^{\Delta t}(b_{*i})
+	\end{equation}
+	De (\ref{eq14}), on peut définir le problème couplé à l'interface $\Gamma_{ij}$ en terme de solveur
+	\begin{equation}\label{eq15}
+	b_{ij} = \mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}(b_{ji},\{b_{ki}\}_{k\in N_i}, k\neq j)
+	\end{equation}
+	\begin{equation}\label{eq16}
+	b_{ji} = \mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}(b_{ij},\{b_{kj}\}_{k\in N_j}, k\neq i)
+	\end{equation}
+	avec $\mathcal{P}_{ij}$ le projecteur sur l'interface $\Gamma_{ij}$.  Ces équations impliquent un principe  d'"action-réaction" sur une interface entre deux domaines. Une modification de la variable $b_{ij}$ entrainera une modification de la l'interface associée $b_{ji}$ et vis-versa. La force de ce couplage est représentée par les matrices jacobienne $\{(\partial\mathcal{M}_i^{\Delta t})/\partial b_{ki}\}k\in N_i$ et $\{(\partial\mathcal{M}_j^{\Delta t})/\partial b_{kj}\}k\in N_j$. Malheureusement on ne peut pas exploiter cette force car le calcul du jacobien n'est pas toujours simple, et des fois pas possible.\\
+	En combinant (\ref{eq15}) et (\ref{eq16}) on obtient un problème de point fixe à l'interface $\Gamma_{ij}$
+	\begin{equation}
+	b_{ij} = \mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}\left(\mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}(b_{ij},\{b_{kj}\}_{k\in N_j}, k\neq i), \{b_{ki}\}k\in N_i, k\neq j \right)
+	\end{equation}
+	ce qui nous permet de définir l'opérateur résiduel à l'interface $\Gamma_{ij}$ par
+	\begin{equation}\label{eq17}
+	\mathcal{R}_{ij}(b)  \overset{\text{déf}}{=}\mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}\left(\mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}(b,\{b_{kj}\}_{k\in N_j}, k\neq i), \{b_{ki}\}k\in N_i, k\neq j \right)-b, \forall\quad b
+	\end{equation}
+	Ce résidu exprime le déséquilibre crée à l'interface $\Gamma_{ij}$ : si $\Omega_i$ et $\Omega_j$ sont fortement couplés, les conditions d'équilibres sur l'interfaces sont satisfaites et dans ce cas le résidu est nul car $\mathcal{R}_{ij}(b_{ij})$. Sinon, les deux domaines sont faiblement couplés.
+	\subsection{Schémas de couplages explicites}\label{sec7}
+	Les schémas de couplages explicites résolvant le problème par un seul appel du solveur par pas de temps. Ils sont basés sur des solutions de (\ref{eq13}) par des méthodes de \text{Gauss-Seidel} semi-explicites. Pour des algorithmes mieux parallélisable on peut utilisé aussi des méthodes type \text{Jacobi} ou explicites. En supposant qu'on résout $\mathcal{M}_i^{\Delta t}$ avant de résoudre $\mathcal{M}_j^{\Delta t}$, le problème résolut à l'interface  $\Gamma_{ij}$ s'écrit :
+	\begin{equation}\label{eq19}
+	b_{ij}^{n+1} = \mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}\left(b_{ji}^n,\{b_{ki}^\bullet\}_{k\in N_i}, k\neq j \right)
+	\end{equation}   
+	\begin{equation}\label{eq20}
+	b_{ji}^{n+1} = \mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}\left(b_{ij}^{n+1},\{b_{kj}^\bullet\}_{k\in N_j}, k\neq i\right)
+	\end{equation}
+	la quantité $b_{ki}^\bullet$ est évalué à $t^n$ ou $t^{n+1}$ si le solveur 
+	$\mathcal{M}_k^{\Delta t}$ est appelé avant ou après $\mathcal{M}_i^{\Delta t}$.\\
+	\subsection{Schémas de coulages implicites}
+	A l'interface $\Gamma_{ij}$, le couplage implicite est donnée par :
+	\begin{equation}\label{eq21}
+	b_{ij}^{n+1} = \mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}(b_{ji}^{n+1},\{b_{ki}^{n+1}\}_{k\in N_i}, k\neq j)
+	\end{equation}
+	\begin{equation}\label{eq22}
+	b_{ji}^{n+1} = \mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}(b_{ij}^{n+1},\{b_{kj}^{n+1}\}_{k\in N_j}, k\neq i)
+	\end{equation} 
+	On remarque que (\ref{eq21}) et (\ref{eq22}) donne des mêmes valeurs discrètes que le problème de point fixe  (\ref{eq17}), avec un résidu nul, ce qui implique qu'à l'interface $\Gamma_{ij}$ on a un équilibre et donc le couplage entre $\Omega_i$ et $\Omega_j$ est fort. Cependant, il est intéressant de voir que d'un point de vu mathématique, le découplage à chaque pas de temps de  (\ref{eq21}) et (\ref{eq22}) n'est pas possible, et c'est souvent moins contraignant d'utiliser des méthodes itératives, qui sont des suites itératives jusqu'à ce qu'un critère de convergence soit rempli. 
+	\begin{equation}%\label{eq21}
+	b_{ij}^{n+1, k+1} = \mathcal{P}_{ij}\circ\mathcal{M}_i^{\Delta t}(b_{ji}^{n+1, k},\{b_{ki}^{n+1}\}_{k\in N_i}, k\neq j)
+	\end{equation}
+	\begin{equation}\label{equ22}
+	\tilde{b}_{ji}^{n+1, k+1} = \mathcal{P}_{ji}\circ\mathcal{M}_j^{\Delta t}(b_{ij}^{n+1, k+1},\{b_{kj}^{n+1}\}_{k\in N_j}, k\neq i)
+	\end{equation} 
+ 	\'A partir de (\ref{equ22})
+	\begin{equation}
+	b_{ij}^{n+1, k+1} = \omega \tilde{b}_{ij}^{n+1, k+1} + (1-\omega)b_{ij}^{n+1, k}
+	\end{equation}
+	Les itérations continues jusqu'à ce que un critère de convergence soit satisfait.
+	\newpage
+	\section{Analyse numérique et exemples}\label{sec4}
+	\subsection{Analyse de la stabilité linéaire pour un couplage de solveur LP}
+	Pour notre analyse, nous revenons à notre problème initial de couplage entre un domaine liquide $\mathcal{M}_1$ et un domaine solide $\mathcal{M}_2$ (figure \ref{Fig5.1}).\\
+	Les conditions aux bords de \text{Dirichlet-Newmann} à l'interface $\Gamma_{12}$ sont données par (\ref{eq6}), (\ref{eq7}) et (\ref{eq8}) : $\dot{m}_{12} = \dot{m}_{21} = 0$, $T_{12} = T_{21}$ et $\phi_{12} = \phi_{21}$. On calcul l'énergie de conservation des deux domaines en supposant leurs masses constantes. On fait donc l'analyse de la stabilité linéaire pour le solveur LP. Cette analyse se base sur une discrétisation en temps pour l'équation de conservation d'énergie (\ref{eq2}) et les lois de fermeture (\ref{eq11}) et (\ref{eq12}) pour résoudre le problème de flux de conduction et de convection. 
+	\includegraphics[width = 1\textwidth]{./schemas/sol_liq.eps}\\
+	\captionof{figure}{Intersection entre $\mathcal{M}_1$ et $\mathcal{M}_2$}
+	\label{Fig5.1}
+	\subsection{ Cas explicite}
+	%Système sur le premier domaine
+	L'objectif est de construire un prototype pour simuler un couplage de deux domaine $\Omega_1$ et $\Omega_2$ avec un schéma explicite sur un pas de temps de discrétisation. Pour se faire, on utilise un schéma d'\text{Euler} explicite pour $\Omega_1$ et un schéma d'\text{Euler} implicite pour $\Omega_2$. On note $\Delta t$ le pas de temps. Pour le premier domaine on a le système :   
+	\begin{equation}
+	\mathcal{S}1
+	\begin{cases}
+	\phi_{12}^n = C^{te}e_1^{\alpha}(T_1^n - T_{12}^n)^{\beta}, \alpha, \beta \in\R, \in\Omega_1 & \\
+	\rho_1C{p_1}e_1 \frac{T_1^n - T_1^{n-1}}{\Delta t} = -\phi_{12}^n \in\Omega_1
+	\end{cases}
+	\end{equation}
+	%Conditions aux bords
+	Avec la continuité de la température sur l'interface
+	\begin{equation}
+	T_{12}^n = T_{21}^n \mtext{sur} \Gamma_{12}
+	\end{equation}
+	
+	%Système sur le deuxième domaine
+	et pour le deuxième domaine on a le système
+	\begin{equation}
+	\mathcal{S}2
+	\begin{cases}
+	T_{21}^{n+1} = -\frac{1}{4}\frac{e_2}{\lambda_2}\phi_{21}^n + \frac{3}{2}T_{2}^{n+1} - \frac{1}{2}T_{b_2} \mtext{dans} \Omega_2 &\\
+	\rho_2C{p_2}e_2 \frac{T_2^{n+1} - T_2^{n}}{\Delta t} = -\phi_{21}^n \in\Omega_2
+	\end{cases}
+	\end{equation}
+	
+	%Conditions aux bords
+	Avec la continuité du flux sur l'interface 
+	\begin{equation}
+	\phi_{21}^n = -\phi_{12}^n \mtext{sur} \Gamma_{12}
+	\end{equation}
+	
+	\subsection{ Analyse de la stabilité}
+	Pour une température $T_{21}^n$ donnée à l'interface à un instant $t^n$, le premier domaine va de $t^{n-1}$ à $t^n$ et un flux de chaleur est calculé à $t^n$. Ce flux de chaleur est alors imposé au second domaine. Celui-ci va de $t^n$ à $t^{n+1}$ et calcule une nouvelle température $T_{21}^{n+1}$ à $t^{n+1}$ et ainsi de suite. Le schéma couplé fait donc un seul appel par temps pour le solveur. Le schéma est explicite. On veut trouver des conditions de stabilités de ce schéma explicite. 
+	\begin{itemize}
+		\item    
+		\begin{equation}\label{1}
+		\phi_{12}^n = C^{te}e_1^{\alpha}(T_1^n - T_{12}^n)
+		\end{equation}
+		et 
+		\begin{equation}\label{fe2}
+		\phi_{12}^{n+1} = e_1^{\alpha}(T_1^{n+1} - T_{12}^{n+1})
+		\end{equation}
+		En faisant (\ref{fe2}) - (\ref{1}) on a:
+		\begin{gather*}
+		\phi_{12}^{n+1} - \phi_{12}^n = C^{te}e_1^{\alpha}(T_1^{n+1} - T_{1}^{n}) - C^{te}e_1^{\alpha}(T_{12}^{n+1} - T_{12}^{n})\\
+		\mtext{or} \rho_1C{p_1}e_1 \frac{T_1^n - T_1^{n-1}}{\Delta t} = -\phi_{12}^n\\
+		\mtext{donc}
+		\phi_{12}^{n+1} - \phi_{12}^n = -C^{te}e_1^{\alpha}\frac{\Delta t}{\rho_1C{p_1}e_1} - C^{te}e_1^{\alpha}(T_{12}^{n+1} - T_{12}^{n})\\
+		\mtext{On note} \tau_1 =  \frac{\rho_1C{p_1}e_1}{C^{te}e_1^{\alpha}}\\
+		\mtext{On a}
+		\phi_{12}^{n+1}\left(1+\frac{\Delta t}{\tau_1}\right) = \phi_{12}^{n} - C^{te}e_1^{\alpha}(T_{12}^{n+1} - T_{12}^{n})\tag{*}
+		\end{gather*}
+		Dans ($\mathcal{S}2$)
+		\begin{gather*}
+		T_{21}^{n+1}  - T_{21}^{n} =  \frac{1}{4}\frac{e_2}{\lambda_2}\left(\phi_{21}^n - \phi_{21}^{n-1} \right) + \frac{3}{2}\left(T_{2}^{n+1} - T_{2}^{n}\right)\\
+		\mtext{Or} \rho_2C{p_2}e_2 \frac{T_2^{n+1} - T_2^{n}}{\Delta t} = -\phi_{21}^n\\
+		\mtext{Alors}
+		T_{21}^{n+1}  - T_{21}^{n} =  \frac{1}{4}\frac{e_2}{\lambda_2}\left(\phi_{21}^n - \phi_{21}^{n-1} \right) + \frac{3}{2}\frac{\Delta t}{\rho_2C{p_2}e_2}\phi_{12}^n\tag{**}
+		\end{gather*}
+		En faisant (**) dans (*) on a
+		\begin{gather*}
+		\left(1 +\frac{\Delta t}{\tau_1}\right)\phi_{12}^{n+1} = \phi_{12}^{n} - C^{te}e_1^{\alpha}\frac{ 1}{4}\frac{e_2}{\lambda_2}\left(\phi_{12}^{n}-\phi_{12}^{n-1}\right) - \frac{3}{2}e_1^{\alpha}\lambda_2\frac{\Delta t}{\rho_2C{p_2}e_2}\phi_{12}^n\\
+		\mtext{On note} \hbar = C^{te}e_1^{\alpha}/\left(\frac{e_2}{\lambda_2}\right) \mtext{et} \tau_2 = \frac{\rho_2C{p_2}e_2}{C^{te}e_1^{\alpha}}\\
+		\mtext{Donc} \left(1 +\frac{\Delta t}{\tau_1}\right)\phi_{12}^{n+1} = \left(1-\frac{\hbar}{4}\right)\phi_{12}^{n} + \frac{\hbar}{4}\phi_{12}^{n-1} - \frac{3}{2}\hbar\frac{\Delta t}{\tau_2}\phi_{12}^{n}
+		\end{gather*}
+		On obtient finalement : 
+		
+		\begin{equation}\label{eq32}
+		\left(1 +\frac{\Delta t}{\tau_1}\right)\phi_{12}^{n+1} - \left[1-\left(1 + 6\frac{\Delta t}{\tau_2}\right)\frac{\hbar}{4} \right]\phi_{12}^n - \frac{\hbar}{4}\phi_{12}^{n-1} = 0
+		\end{equation}
+		Avec $\hbar = C^{te}e_1^{\alpha}/(\frac{e_2}{\lambda_2})$, $\tau_1 = \frac{\rho_1C{p_1}e_1 }{C^{te}e_1^{\alpha}}$ et $\tau_2 = \frac{\rho_2C{p_2}e_2 }{C^{te}e_1^{\alpha}}$.\\
+		Pour assurer la stabilité du schéma explicite dans $\Omega_2$, on impose $\Delta t$ assez petit que $\tau_2$ tel que : $\Delta t/\tau_2 \ll 1$. L'équation caractéristique de (\ref{eq32}) s'écrit donc :
+		\begin{equation}\label{excara}
+		\left(1 +\frac{\Delta t}{\tau_1}\right)x^2 - \left(1-\frac{\hbar}{4}  \right)x - \frac{\hbar}{4} = 0 
+		\end{equation} 
+		\begin{itemize}
+			\item [$\bullet$] Si  $\Delta/\tau_1  \ll 1$ et pour tout $h$, (\ref{excara}) admet deux racines réelles et en utilisant un développement de \text{Taylor} lorsque $\Delta/\tau_1  \ll 0$ on obtient :
+			
+			\[
+			x_1^* = 1 - \frac{4}{\hbar+4}\frac{\Delta t}{\tau_1} + \mathcal{O}\left[\left(\frac{\Delta t}{\tau_1}\right)^2\right]
+			\] 
+			et 
+			\[
+			x_2^* = -\frac{\hbar}{4} + \frac{\hbar^2}{4(\hbar+4)}\frac{\Delta t}{\tau_1} + \mathcal{O}\left[\left(\frac{\Delta t}{\tau_1}\right)^2\right]
+			\]
+			
+		\end{itemize}
+	\end{itemize}
+	Théoriquement, on remarque que si $\frac{\Delta t}{\tau_1} \ll 1$,$\frac{\Delta t}{\tau_2} \ll 1$, alors la condition de stabilité est $\va{\hbar} \leq 4$. Malheureusement on constate numériquement que le rapport $\frac{\Delta t}{\tau_1}$ et $\frac{\Delta t}{\tau_2}$ ne sont pas négligeable. Par conséquent, on a recours à la simulation numérique pour calculer la valeur $\hbar^{stab}$ de stabilité pour laquelle on a stabilité si $\hbar < \hbar^{stab}$.    
+	\subsection{Cas implicite}
+	L'algorithme de résolution est décrit ci-après. Pour une température $T_{21}^{n+1,0}$ pour le domaine $\Omega_1$, on itère pour $k\geq 0$ avec les étapes suivantes :
+	\begin{enumerate}
+		\item On calcul le flux de chaleur $\phi_{12}^{n+1,k+1}$ avec
+		\begin{equation}
+		\mathcal{S}3
+		\begin{cases}
+		\phi_{12}^{n+1,k+1} = C^{te}e_1^{\alpha}(T_1^n - T_{12}^{n+1})^{\beta}, \alpha, \beta \in\R, \in\Omega_1 & \\
+		\rho_1C{p_1}e_1 \frac{T_1^{n+1} - T_1^{n}}{\Delta t} = -\phi_{12}^{n+1, k+1} \in\Omega_1
+		\end{cases}
+		\end{equation}
+		%Conditions aux bords
+		Avec la continuité de la température sur l'interface
+		\begin{equation}
+		T_{12}^{n+1} = T_{21}^{n+1,k} \mtext{sur} \Gamma_{12}
+		\end{equation}
+		\item On calcul la température à l'interface $\tilde{T}_{21}^{n+1,k+1}$ avec
+		%Système sur le deuxième domaine
+		
+		\begin{equation}
+		\mathcal{S}4
+		\begin{cases}
+		\tilde{T}_{21}^{n+1,k+1} = -\frac{1}{4}\frac{e_2}{\lambda_2}\phi_{21}^{n+1} + \frac{3}{2}T_{2}^{n+1} - \frac{1}{2}T_{b_2} \mtext{dans} \Omega_2 &\\
+		\rho_2C{p_2}e_2 \frac{T_2^{n+1} - T_2^{n-1}}{\Delta t} = -\phi_{21}^n \in\Omega_2
+		\end{cases}
+		\end{equation}
+		%Conditions aux bords
+		Avec la continuité du flux sur l'interface 
+		\begin{equation}
+		\phi_{21}^{n+1} = -\phi_{12}^{n+1,k+1} \mtext{sur} \Gamma_{12}
+		\end{equation}
+		\item Test de convergence avec 
+		\begin{equation}
+		\frac{\va{\tilde{T}_{21}^{n+1,k+1}-T_{21}^k}}{T_{21}^k} \leq \epsilon_{rel}
+		\end{equation}
+	\end{enumerate}
+	Si le résultat n'est pas satisfaisant on procède à une relaxation de la température sur l'interface
+	\begin{equation}\label{eq25}
+	T_{21}^{n+1,k+1} = \omega\tilde{T}_{21}^{n+1, k+1} + (1-\omega)T_{21}^{n+1,k}
+	\end{equation}
+	et on ré-effectue l'opération. Autrement, les flux de chaleur et températures définitifs sont donnés par $T_{21}^{n+1} = T_{21}^{n+1,k+1}$ et $\phi_{12}^{n+1} = \phi_{12}^{n+1,k+1}$. Par conséquent, les variables internes $T_1^{n+1}$ et $T_2^{n+1}$ peuvent être absolument calculer implicitement : l'algorithme itératif nous permet d'utiliser un solveur implicite pour les deux domaines si on peut découpler les deux domaines.
+	\subsection{Analyse de la stabilité}
+	\begin{itemize}
+		\item 
+		\begin{gather*}
+		\tilde{T}_{21}^{n+1, k+1} = \frac{1}{4}\frac{e_2}{\lambda_2}\phi_{12}^{n+1,k+1} + \frac{3}{2}T_2^{n+1} - \frac{1}{2}T_{b_2}\\
+		\mtext{Avec} \rho_2C{p_2}e_2 \frac{T_2^{n+1} - T_2^{n-1}}{\Delta t} = -\phi_{21}^n
+		\end{gather*}
+		On obtient
+		\begin{equation}\label{eq26}
+		\tilde{T}_{21}^{n+1, k+1} = \frac{1}{4}\frac{e_2}{\lambda_2}\phi_{12}^{n+1,k+1} - \frac{3}{2}\frac{\Delta t}{\rho_2C{p_2}e_2}\phi_{12}^{n+1, k+1} + g(T_2^n, T_{b_2})
+		\end{equation}
+		Avec $g(T_2^n, T_{b_2}) = \frac{3}{2}T_2^{n} - \frac{1}{2}T_{b_2}$\\
+		Le flux s'écrit
+		\begin{gather*}
+		\phi_{12}^{n+1; k+1} = C^{te}e_1^{\alpha}\left(T_1^{n+1} - T_{21}^{n+1,k} \right)\\
+		\mtext{Avec} \rho_1C{p_1}e_1 \frac{T_1^{n+1} - T_1^{n}}{\Delta t} = -\phi_{12}^{n+1, k+1}\\
+		\phi_{12}^{n+1, k+1} = C^{te}e_1^{\alpha}\left(-\frac{\Delta t}{\rho_1C{p_1}e_1}\phi_{12}^{n+1, k+1} + T_1^n -T_{21}^{n+1,k}\right)\\
+		\mtext{Donc}
+		\left(1+C^{te}e_1^{\alpha}\frac{\Delta t}{\rho_1C{p_1}e_1}\right)\phi_{12}^{n+1, k+1} = C^{te}e_1^{\alpha}T_1^n - C^{te}e_1^{\alpha}T_{21}^{n+1,k}
+		\end{gather*}
+		On obtient :
+		\begin{equation}\label{eq27}
+		\phi_{12}^{n+1, k+1} = \frac{C^{te}e_1^{\alpha}}{1+\frac{\Delta t}{\rho_1C{p_1}e_1}C^{te}e_1^{\alpha}}T_1^n - \frac{C^{te}e_1^{\alpha}}{1+\frac{\Delta t}{\rho_1C{p_1}e_1}C^{te}e_1^{\alpha}}T_{21}^{n+1,k}
+		\end{equation}
+		(\ref{eq27}) dans (\ref{eq26}) On obtient
+		\begin{equation}\label{eq28}
+		\tilde{T}_{21}^{n+1; k+1} = -\frac{\hbar}{4}\left(\frac{1-6\Delta t/\tau_2}{1+\Delta t/\tau_1}\right)T_{21}^{n+1,k} + g(T_1^n, T_2^n, T_{b_2}) 
+		\end{equation}
+		(\ref{eq28}) dans (\ref{eq25}) on obtient
+		\begin{equation}\label{19}
+		T_{21}^{n+1,k+1} = \left[1- \left(1+\frac{1-6\Delta t/\tau_2}{1+\Delta t/\tau_1}\frac{\hbar}{4}\right)\omega \right]T_{21}^{n+1,k} + g(T_1^n, T_2^n, T_{b_2}) 
+		\end{equation}
+		On note $T_{2,1}^{n+1}$ la solution du problème aux point fixe associé à l'équation (\ref{19}) et $e_k = \va{T_{2,1}^{n+1,k} - T_{2,1}^{n+1}}$ l'erreur à l'itération k. \\
+		\textbf{Réduction de l'expression de l'erreur}\\
+		\begin{gather*}
+		e_k = \va{T_{2,1}^{n+1,k} - T_{2,1}^{n+1}}\\
+		= \va{\left[1 - \left(1+\frac{1-6\Delta t/\tau_2}{1+\Delta t/\tau_1}\frac{\hbar}{4}\right)\omega \right]\left(T_{21}^{n+1,k-1} - T_{21}^{n+1,k-2}\right)}\\
+		\mtext{Donc} e_{k+1} = \va{\left[1 - \left(1+\frac{1-6\Delta t/\tau_2}{1+\Delta t/\tau_1}\frac{\hbar}{4}\right)\omega \right]\left(T_{21}^{n+1,k} - T_{21}^{n+1,k-1}\right)}\\
+		\mtext{D'où}
+		e_{k+1} = \va{\left[1 - \left(1+\frac{1-6\Delta t/\tau_2}{1+\Delta t/\tau_1}\frac{\hbar}{4}\right)\omega \right]e_k}    
+		\end{gather*}
+		Donc l'erreur d'itération est donnée par 
+		\begin{equation}
+		e_{k+1} = \mathcal{K}e_k
+		\end{equation}
+		Avec 
+		\begin{equation}
+		\mathcal{K} = \va{\left[1-\left(1+\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1} \frac{\hbar}{4}\right)\omega \right]}
+		\end{equation}
+		Pour que le schéma soit stable, il suffit que $\mathcal{K}$ soit inférieur à $1$
+		\begin{gather*}
+		\mathcal{K} < 1 \iff \va{\left[1-\left(1+\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1} \frac{\hbar}{4}\right)\omega \right]} < 1\\
+		\iff -1 < 1-\left(1+\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1} \frac{\hbar}{4}\right)\omega < 1 \\
+		\iff -2 < -\left(1+\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1} \frac{\hbar}{4}\right)\omega < 0\\
+		\iff 0 < \left(1+\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1} \frac{\hbar}{4}\right)\omega < 2\\
+		\end{gather*} 
+		Donc, l'algorithme itératif converge vers la solution à l'interface, c'est à dire $T_{21}^{n+1,\infty} = T_{21}^{n+1}$ et $\phi_{12}^{n+1,\infty} = \phi_{12}^{n+1}$ si et seulement si :
+		\begin{equation}\label{eq47}
+		0 < \omega < \frac{2}{\left(1+\va{\frac{1-6\Delta t /\tau_2}{1+\Delta t /\tau_1}} \frac{\hbar}{4}\right)}
+		\end{equation}
+		
+		\item [$\bullet$]  Pour $\Delta t = 0$\\
+		L'équation (\ref{19}) devient
+		\begin{equation}
+		T_{21}^{n+1,k+1} = \left[1- \left(1+ \frac{\hbar}{4}\right)\omega \right]T_{21}^{n+1,k} + g(T_1^n, T_2^n, T_{b_2}) 
+		\end{equation} 
+		et (\ref{eq47}) devient
+		
+		\begin{equation}
+		0 < \omega < \frac{2}{1+\hbar/4}
+		\end{equation}
+	\end{itemize}
+	Pour $\hbar > 4$, avec $\hbar$ la valeur limite de convergence du schéma explicite, le schéma implicite converge avec $\omega < 1$. Plus $\omega$ est petit, plus lente sera la convergence. 
+	\subsection{Résultats numériques}
+	L'analyse de la stabilité expérimentale sont illustrées par les figures suivantes. La courbe rouge nous trace le schéma implicite, et la courbe bleue nous trace le schéma explicite.  Les deux domaines faisant l'objet de cette simulation sont à une température d'équilibre de $T_1 = T_2 = T_{12} = T_{21} = 2000 K$ à $t=0s$ et une discontinuité est appliqué sur le bord haut et le bord bas. Les conditions aux bords sont imposées à $t=0^+$. On cherche par des simulations le $\hbar^{stab}$ qui limite la région de stabilité en variant le $\hbar$. Les figures (\ref{Fig.6}) et (\ref{Fig.7}) montrent que les oscillations s'atténuent pour un $\hbar = 3.5$. Donc on est encore sous régime de stabilité. Par contre les figures (\ref{Fig.8}) et (\ref{Fig.9}) montrent que les oscillations s'intensifient, ce qui montre que le schéma n'est plus stable pour un $\hbar = 3.7$. Ce qui nous permet de conclure que numériquement, on trouve qu'on a stabilité si $\hbar\in[3.5,3.7]$. \\
+	\\	
+	
+	\begin{figure}[h]
+		\begin{minipage}[c]{.46\linewidth}
+			\centering
+			\includegraphics[width=8cm]{./schemas/interface_heat_flow_rate35}
+			\captionof{figure}{interface heat flow rate $\hbar=3.5$}
+			\label{Fig.6}
+		\end{minipage}
+		\hfill%
+		\begin{minipage}[c]{.46\linewidth}
+			\centering
+			\includegraphics[width=8cm]{./schemas/interface_temperature35}
+			\captionof{figure}{interface température $\hbar=3.5$}
+			\label{Fig.7}
+		\end{minipage}
+	\end{figure}
+	\begin{figure}[h]
+		\begin{minipage}[c]{.46\linewidth}
+			\centering
+			\includegraphics[width=8cm]{./schemas/interface_heat_flow_rate37}
+			\captionof{figure}{interface heat flow rate $\hbar=3.7$}
+			\label{Fig.8}
+		\end{minipage}
+		\hfill%
+		\begin{minipage}[c]{.46\linewidth}
+			\centering
+			\includegraphics[width=8cm]{./schemas/interface_temperature37}
+			\captionof{figure}{interface température $\hbar=3.7$}
+			\label{Fig.9}
+		\end{minipage}
+	\end{figure}
+	
+	Numériquement, on remarque que $\frac{\Delta t}{\tau_1}$ n'est pas négligeable et donc la condition de stabilité du schéma explicite n'est pas $\va{\hbar}<4$, mais $\hbar<\hbar^{stab}$ avec $\hbar^{satb}$ à calculer. Par la simulation numérique nous trouvons que $\hbar^{stab}\approx 3.6$. On remarque aussi numériquement que, pour différentes valeurs de $\omega$ vérifiant la relation (\ref{eq47}), on a toujours une stabilité. La vitesse de convergence varie en fonction de la valeur de $\omega$. 	
+	\newpage
+	\section{Conclusion}
+	Nous avons présenté dans ce mémoire le contexte multi-physiques et multi-échelles des \text{AG} dans les \text{REP}. De ce contexte, on a définit les équations modélisant le problème à résoudre pour répondre au besoins de sécurité. On a aussi définit le concept de couplage et présenté l'approche partitionnée utilisée pour résoudre les problèmes de couplage. Dans le cadre de notre étude, on s'est concentré sur un problème de couplage entre un domaine solide et un domaine liquide représentés par des équations $0D$ ou \text{LP}. C'est un problème très important pour les \text{AG}. Ensuite, on a fait une analyse numérique du couplage pour trouver des conditions de stabilités des schémas explicites et implicites utilisés pour résoudre notre problème. Par le calcul, on a vérifié les résultats de l'analyse numérique  et  on remarque que $\frac{\Delta t}{\tau_1}$ n'est pas négligeable et donc la condition de stabilité du schéma explicite n'est pas $\va{\hbar}<4$, mais $\hbar<\hbar^{stab}$ avec $\hbar^{satb}$ à calculer. Par la simulation numérique nous trouvons que $\hbar^{stab}\approx 3.6$. On remarque aussi numériquement que, pour différentes valeurs de $\omega$ vérifiant la relation (\ref{eq47}), on a toujours une stabilité. La vitesse de convergence varie en fonction de la valeur de $\omega$. Le schéma implicite permet de supprimer les oscillations du schéma explicite et il rend les calcul précis et utilisable pour les accidents graves.   
+	\newpage	
+	\begin{thebibliography}{1}
+		\bibitem{severe accidents in nuclear reactors}  \textsc{L.Viot}, \textsc{L.Saas} and \textsc{F.De Vuyst} \textit{Solving coupled problems of lumbed parameter models in a platform for severe aacidents in nuclear reactors}, International Journal for Multiscale Computational Engineering, 16(6):555–577 (2018)
+		
+		\bibitem{Thèse L.viot}  \textsc{L.Viot}, \textit{ Couplage et synchronisation de modèles dans un code scénario d'accident graves dans les réacteurs nucléaires} 12 octobre 2018.
+		
+		\bibitem{thermal models with convection}  \textsc{R.Le Tellier}, \textsc{E.Skrzypek} and \textsc{L. Saas} \textit{On the treatment of plane fusion front in lumped parameter thermal models with convection}, Applied Thermal Engineering june 21, 2019.
+		
+		\bibitem{Fixed point iterations}  \textsc{Isabelle Ramière}, \textsc{Thomas Helfer} \textit{Iterative residual-based vector methods ti accelerate fixed point iterations}, Computers and Mthematics with Application, Elsevier, 2015, 70, pp.2210 - 2226.
+		
+	\end{thebibliography} 	  
+  
+
+
+\end{document}
